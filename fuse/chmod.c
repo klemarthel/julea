@@ -21,15 +21,28 @@
 #include "julea-fuse.h"
 
 #include <errno.h>
-
+#include "file.h"
 int
 jfs_chmod(char const* path, mode_t mode, struct fuse_file_info* fi)
 {
-	gint ret = -ENOENT;
 
-	(void)path;
-	(void)mode;
+	gint ret = -ENOENT;
+	g_autoptr(JBatch) batch=NULL;
+	g_autoptr(JFileMetadataOut) fe=NULL;
+	g_autoptr(JFileSelector) fs=NULL;
+
 	(void)fi;
 
+	batch=j_batch_new_for_template(J_SEMANTICS_TEMPLATE_POSIX);
+	fs=j_file_selector_new(path);
+	fe=j_file_metadata_out_new_load_for_update(path,fs);
+	if(fe){
+		set_mode(fe,mode);
+		j_file_metadata_write(fs,fe,batch);
+		if (j_batch_execute(batch))
+		{
+			ret=0;
+		}
+	}
 	return ret;
 }

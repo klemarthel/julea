@@ -19,48 +19,24 @@
 #include <julea-config.h>
 
 #include "julea-fuse.h"
-
-#include <errno.h>
 #include "file.h"
 
+#include <errno.h>
+#include <julea.h>
+
 int
-jfs_mkdir(char const* path, mode_t mode)
+jfs_open(char const* path, struct fuse_file_info* fi)
 {
 	int ret = -ENOENT;
-
-	g_autoptr(JBatch) batch = NULL;
-	g_autoptr(JFileMetadataOut) out=NULL;
+	g_autoptr(JFileMetadataIn) in=NULL;
 	g_autoptr(JFileSelector) fs=NULL;
-	struct timespec now;
-	
-	g_autofree gchar* basename = NULL;
-	g_autofree gchar* directory = NULL;
 
-	mode=mode|S_IFDIR;
-	clock_gettime(CLOCK_REALTIME_ALARM,&now);
 	fs=j_file_selector_new(path);
-	out=j_file_metadata_out_new(path);
-	basename = g_path_get_basename(path);
-	directory = g_path_get_dirname(path);
-	batch = j_batch_new_for_template(J_SEMANTICS_TEMPLATE_POSIX);
-	
-	//set_name(out,basename);
-	set_object(out,0);
-	set_size(out,0); //TODO!
-	set_owner(out,geteuid()); // TODO difference between effective and real 
-	set_group(out,getegid());
-	set_mode(out,mode);
-	set_dir(out,directory);
-	set_ctime(out,&now);
-	set_atime(out,&now);
-	set_mtime(out,&now);
-	
-
-	j_file_metadata_create(fs,out,batch);
-
-	if (j_batch_execute(batch))
-	{
-		ret = 0;
+	in=j_file_metadata_new_load(fs);
+	if(in){
+		fi->fh=get_object(in);
+		ret=0;
 	}
+	
 	return ret;
 }

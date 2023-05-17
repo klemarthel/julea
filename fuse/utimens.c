@@ -21,32 +21,38 @@
 #include "julea-fuse.h"
 
 #include <errno.h>
+#include "file.h"
+#ifdef DATABASE_METADATA
+#include <julea-db.h>
+#endif
 
 int
 jfs_utimens(char const* path, const struct timespec ts[2], struct fuse_file_info* fi)
 {
 	int ret = -ENOENT;
-
 	g_autoptr(JBatch) batch = NULL;
-	g_autoptr(JKV) kv = NULL;
-	gpointer value;
-	guint32 len;
-
-	(void)ts;
+	
+	g_autoptr(JFileSelector) fs=NULL;
+	g_autoptr(JFileMetadataIn) in=NULL;
+	g_autoptr(JFileMetadataOut) out=NULL;
+	fs=j_file_selector_new(path);
+	
 	(void)fi;
-
-	batch = j_batch_new_for_template(J_SEMANTICS_TEMPLATE_POSIX);
-	kv = j_kv_new("posix", path);
-
-	j_kv_get(kv, &value, &len, batch);
-
-	if (j_batch_execute(batch))
+	
+	in=j_file_metadata_new_load(fs);
+	batch=j_batch_new_for_template(J_SEMANTICS_TEMPLATE_POSIX);
+	if (in)
 	{
-		/// \todo
-		ret = 0;
+		out=j_file_metadata_in_to_out(in);
+		set_atime(out,&ts[0]);
+		set_mtime(out,&ts[1]);
+		
+		j_file_metadata_write(fs,out,batch);
+		
+		if(j_batch_execute(batch)){
+			ret = 0;	
+		}
 
-		g_free(value);
 	}
-
 	return ret;
 }

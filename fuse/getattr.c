@@ -15,102 +15,78 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
-#include <julea-config.h>
-
 #include "julea-fuse.h"
 
 #include <errno.h>
 #include <string.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include "file.h"
 
 int
 jfs_getattr(char const* path, struct stat* stbuf, struct fuse_file_info* fi)
 {
 	int ret = -ENOENT;
 
-	g_autoptr(JBatch) batch = NULL;
-	g_autoptr(JKV) kv = NULL;
-	gpointer value;
-	guint32 len;
-
+	g_autoptr(JFileMetadataIn) fe=NULL;
+	g_autoptr(JFileSelector) fs=NULL;
 	(void)fi;
+	
 
 	if (g_strcmp0(path, "/") == 0)
 	{
-		stbuf->st_mode = S_IFDIR | S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;
+		stbuf->st_mode = S_IFDIR | S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH | S_IWOTH;
 		stbuf->st_nlink = 1;
 		stbuf->st_uid = 0;
 		stbuf->st_gid = 0;
 		stbuf->st_size = 0;
 		stbuf->st_atime = stbuf->st_ctime = stbuf->st_mtime = g_get_real_time() / G_USEC_PER_SEC;
-
 		return 0;
 	}
 
-	batch = j_batch_new_for_template(J_SEMANTICS_TEMPLATE_POSIX);
-	kv = j_kv_new("posix", path);
+	
+	fs=j_file_selector_new(path);
+	fe=j_file_metadata_new_load(fs);
 
-	j_kv_get(kv, &value, &len, batch);
-
-	if (j_batch_execute(batch))
+	if (fe)
 	{
-		bson_t file[1];
-		bson_iter_t iter;
-		gboolean is_file = TRUE;
+		
 		gint64 size = 0;
-		gint64 time = 0;
+		struct timespec* atime=NULL;
+		struct timespec* ctime=NULL;
+		struct timespec* mtime=NULL;
+		gint64 owner = 0;
+		gint64 group = 0;
+		gint32 mode = 0;
 
-		bson_init_static(file, value, len);
-		bson_iter_init(&iter, file);
+		size =get_size(fe);
+		mtime =get_mtime(fe);
+		atime =get_atime(fe);
+		ctime =get_ctime(fe);
+		owner =get_owner(fe);
+		group =get_group(fe);
+		mode=get_mode(fe);
+		
 
-		while (bson_iter_next(&iter))
-		{
-			gchar const* key;
+		stbuf->st_nlink = 1;
+		stbuf->st_uid = owner;
+		stbuf->st_gid = group;
 
-			key = bson_iter_key(&iter);
+		stbuf->st_atime = atime->tv_sec;
+		stbuf->st_atimensec = atime->tv_sec;
 
-			if (g_strcmp0(key, "file") == 0)
-			{
-				is_file = bson_iter_bool(&iter);
-			}
-			else if (g_strcmp0(key, "size") == 0)
-			{
-				size = bson_iter_int64(&iter);
-			}
-			else if (g_strcmp0(key, "time") == 0)
-			{
-				time = bson_iter_int64(&iter);
-			}
-		}
-
-		if (is_file)
-		{
-			stbuf->st_mode = S_IFREG | S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
-			stbuf->st_nlink = 1;
-			stbuf->st_uid = getuid();
-			stbuf->st_gid = getgid();
-			stbuf->st_size = size;
-			stbuf->st_atime = stbuf->st_ctime = stbuf->st_mtime = time / G_USEC_PER_SEC;
-
-			ret = 0;
-		}
-		else
-		{
-			stbuf->st_mode = S_IFDIR | S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;
-			stbuf->st_nlink = 1;
-			stbuf->st_uid = getuid();
-			stbuf->st_gid = getgid();
-			stbuf->st_size = 0;
-			stbuf->st_atime = stbuf->st_ctime = stbuf->st_mtime = time / G_USEC_PER_SEC;
-
-			ret = 0;
-		}
-
-		bson_destroy(file);
-		g_free(value);
+		stbuf->st_ctime = ctime->tv_sec;
+		stbuf->st_ctimensec = ctime->tv_sec;
+		
+		stbuf->st_mtime = mtime->tv_sec;
+		stbuf->st_mtimensec = mtime->tv_sec;
+		
+		stbuf->st_mode =  mode;
+		stbuf->st_size = size;
+		ret = 0;
+		g_free(atime);
+		g_free(mtime);
+		g_free(ctime);
 	}
-
 	return ret;
 }

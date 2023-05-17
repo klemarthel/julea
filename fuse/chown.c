@@ -22,15 +22,29 @@
 
 #include <errno.h>
 
+#include "file.h"
 int
 jfs_chown(char const* path, uid_t uid, gid_t gid, struct fuse_file_info* fi)
 {
 	gint ret = -ENOENT;
+	g_autoptr(JBatch) batch;
+	g_autoptr(JFileSelector) fs = NULL;
+	g_autoptr(JFileMetadataOut) out = NULL;
 
-	(void)path;
-	(void)uid;
-	(void)gid;
 	(void)fi;
+	fs = j_file_selector_new(path);
+	out = j_file_metadata_out_new_load_for_update(path,fs);
+	if (out)
+	{
+		set_group(out, gid);
+		set_owner(out, uid);
+		batch = j_batch_new_for_template(J_SEMANTICS_TEMPLATE_POSIX);
+		j_file_metadata_write(fs, out, batch);
+		if (j_batch_execute(batch))
+		{
+			ret = 0;
+		}
+	}
 
 	return ret;
 }

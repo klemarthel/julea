@@ -21,41 +21,30 @@
 #include "julea-fuse.h"
 
 #include <errno.h>
+#include "file.h"
 
 int
 jfs_truncate(char const* path, off_t size, struct fuse_file_info* fi)
 {
 	int ret = -ENOENT;
 
-	g_autoptr(JBatch) batch = NULL;
-	g_autoptr(JKV) kv = NULL;
-	gpointer value;
-	guint32 len;
+	JFileMetadataIn* in=NULL;
+	JFileSelector* fs=NULL;
 
 	(void)size;
 	(void)fi;
 
-	batch = j_batch_new_for_template(J_SEMANTICS_TEMPLATE_POSIX);
-	kv = j_kv_new("posix", path);
+	fs=j_file_selector_new(path);
+	in=j_file_metadata_new_load(fs);
 
-	j_kv_get(kv, &value, &len, batch);
-
-	if (j_batch_execute(batch))
+	if (in)
 	{
-		bson_t file[1];
-		bson_iter_t iter;
-
-		bson_init_static(file, value, len);
-
-		if (bson_iter_init_find(&iter, file, "file") && bson_iter_type(&iter) == BSON_TYPE_BOOL && bson_iter_bool(&iter))
-		{
+		
 			/// \todo
 			ret = 0;
-		}
 
-		bson_destroy(file);
-		g_free(value);
 	}
-
+	j_file_selector_destroy(fs);
+	j_file_metadata_in_destroy(in);
 	return ret;
 }

@@ -28,28 +28,22 @@ jfs_access(char const* path, int mask)
 	int ret = -ENOENT;
 
 	g_autoptr(JBatch) batch = NULL;
-	g_autoptr(JKV) kv = NULL;
-	gpointer value;
-	guint32 len;
-
+	g_autoptr(JFileSelector) fs = NULL;
+	g_autoptr(JFileMetadataIn) in = NULL;
+	
 	(void)mask;
 
 	if (g_strcmp0(path, "/") == 0)
 	{
 		return 0;
 	}
-
 	batch = j_batch_new_for_template(J_SEMANTICS_TEMPLATE_POSIX);
-	kv = j_kv_new("posix", path);
-
-	j_kv_get(kv, &value, &len, batch);
+	fs = j_file_selector_new(path);
+	in = j_file_metadata_new_load(fs);
 
 	if (j_batch_execute(batch))
 	{
 		ret = 0;
-
-		g_free(value);
 	}
-
 	return ret;
 }

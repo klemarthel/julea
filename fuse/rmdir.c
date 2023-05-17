@@ -21,6 +21,7 @@
 #include "julea-fuse.h"
 
 #include <errno.h>
+#include "file.h"
 
 int
 jfs_rmdir(char const* path)
@@ -28,17 +29,18 @@ jfs_rmdir(char const* path)
 	int ret = -ENOENT;
 
 	g_autoptr(JBatch) batch = NULL;
-	g_autoptr(JKV) kv = NULL;
-
+	JFileMetadataOut* out;
+	JFileSelector* fs;
+	out=j_file_metadata_out_new(path);
+	fs=j_file_selector_new(path);
 	batch = j_batch_new_for_template(J_SEMANTICS_TEMPLATE_POSIX);
-	kv = j_kv_new("posix", path);
-
-	j_kv_delete(kv, batch);
+	j_file_metadata_delete(fs,out,batch);
 
 	if (j_batch_execute(batch))
 	{
 		ret = 0;
 	}
-
+	j_file_metadata_out_destroy(out);
+	j_file_selector_destroy(fs);
 	return ret;
 }

@@ -22,19 +22,17 @@
 
 #include <errno.h>
 #include <string.h>
-
+#include "file.h"
 int
 jfs_readdir(char const* path, void* buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info* fi, enum fuse_readdir_flags flags)
 {
 	int ret = -ENOENT;
-
-	JKVIterator* it;
+	JDirectoryIterator* it;
 	g_autofree gchar* prefix = NULL;
 
 	(void)offset;
 	(void)fi;
 	(void)flags;
-
 	if (g_strcmp0(path, "/") == 0)
 	{
 		prefix = g_strdup(path);
@@ -44,32 +42,21 @@ jfs_readdir(char const* path, void* buf, fuse_fill_dir_t filler, off_t offset, s
 		prefix = g_strdup_printf("%s/", path);
 	}
 
-	it = j_kv_iterator_new("posix", prefix);
+	it = j_directory_iterator_new(prefix);
 
-	while (j_kv_iterator_next(it))
+	while (j_directory_iterator_next(it))
 	{
-		gconstpointer value;
-		guint32 len;
-		bson_t tmp[1];
-		bson_iter_t iter;
-
-		j_kv_iterator_get(it, &value, &len);
-		bson_init_static(tmp, value, len);
-
-		if (bson_iter_init_find(&iter, tmp, "name") && bson_iter_type(&iter) == BSON_TYPE_UTF8)
+		g_autofree char* name = j_directory_iterator_get(it);
+		g_autofree char* dir_name=g_path_get_dirname(name);
+		if (g_strcmp0(dir_name,path)==0)
 		{
-			gchar const* name;
-
-			name = bson_iter_utf8(&iter, NULL);
-			filler(buf, name, NULL, 0, 0);
+			g_autofree char* base=g_path_get_basename(name);
+			filler(buf, base, NULL, 0, 0);
 		}
-		else
-		{
-			filler(buf, "???", NULL, 0, 0);
-		}
+		
 	}
 
-	j_kv_iterator_free(it);
+	j_directory_iterator_destroy(it);
 
 	ret = 0;
 

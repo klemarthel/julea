@@ -21,6 +21,9 @@
 #include "julea-fuse.h"
 
 #include <errno.h>
+#include <glib.h>
+#include <string.h>
+#include "file.h"
 
 int
 jfs_write(char const* path, char const* buf, size_t size, off_t offset, struct fuse_file_info* fi)
@@ -28,59 +31,43 @@ jfs_write(char const* path, char const* buf, size_t size, off_t offset, struct f
 	int ret = -ENOENT;
 
 	g_autoptr(JBatch) batch = NULL;
-	g_autoptr(JKV) kv = NULL;
 	g_autoptr(JObject) object = NULL;
+	JFileSelector* fs = NULL;
+	JFileMetadataIn* in = NULL;
+	JFileMetadataOut* out = NULL;
+
 	guint64 bytes_written;
-	gpointer value;
-	guint32 len;
+	g_autofree gchar* object_name = nr_to_object_name(fi->fh);
 
-	(void)fi;
-
+	fs = j_file_selector_new(path);
 	batch = j_batch_new_for_template(J_SEMANTICS_TEMPLATE_POSIX);
-	kv = j_kv_new("posix", path);
-	object = j_object_new("posix", path);
+	object = j_object_new("posix", object_name);
+	in = j_file_metadata_new(fs, batch);
 
-	j_kv_get(kv, &value, &len, batch);
 	j_object_write(object, buf, size, offset, &bytes_written, batch);
 
 	if (j_batch_execute(batch))
 	{
-		bson_t file[1];
-		bson_iter_t iter;
-		gint64 old_size = 0;
+		struct timespec time;
 
+		guint64 new_size = offset + bytes_written;
 		ret = bytes_written;
-
-		bson_init_static(file, value, len);
-
-		if (bson_iter_init_find(&iter, file, "size") && bson_iter_type(&iter) == BSON_TYPE_INT64)
+		out = j_file_metadata_in_to_out(in);
+		if (get_size(in) < new_size)
 		{
-			old_size = bson_iter_int64(&iter);
-
-			if ((guint64)old_size < offset + size)
-			{
-				gpointer copy;
-
-				bson_iter_overwrite_int64(&iter, offset + size);
-
-#if GLIB_CHECK_VERSION(2, 68, 0)
-				copy = g_memdup2(bson_get_data(file), file->len);
-#else
-				copy = g_memdup(bson_get_data(file), file->len);
-#endif
-
-				j_kv_put(kv, copy, file->len, g_free, batch);
-
-				if (!j_batch_execute(batch))
-				{
-					ret = -EIO;
-				}
-			}
+			set_size(out, new_size);
 		}
-
-		bson_destroy(file);
-		g_free(value);
+		clock_gettime(CLOCK_REALTIME_ALARM, &time);
+		set_atime(out, &time);
+		set_mtime(out, &time);
+		j_file_metadata_write(fs, out, batch);
+		if (!j_batch_execute(batch))
+		{
+			ret = -EIO;
+		}
 	}
-
+	j_file_metadata_in_destroy(in);
+	j_file_metadata_out_destroy(out);
+	j_file_selector_destroy(fs);
 	return ret;
 }

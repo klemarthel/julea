@@ -19,47 +19,78 @@
 #include <julea-config.h>
 
 #include "julea-fuse.h"
+#include "file.h"
 
 #include <errno.h>
+#include <julea.h>
 
 int
 jfs_create(char const* path, mode_t mode, struct fuse_file_info* fi)
 {
 	int ret = -ENOENT;
-
+	guint64 object_number=0;
+	guint64 max_iter=G_MAXUINT64;
+	struct timespec time;
 	g_autoptr(JBatch) batch = NULL;
-	g_autoptr(JKV) kv = NULL;
 	g_autoptr(JObject) object = NULL;
-	bson_t* tmp;
-	gpointer value;
-	guint32 len;
+	
 	g_autofree gchar* basename = NULL;
-
-	(void)mode;
-	(void)fi;
-
+	
+	gint32 is_file=1;
+	guint64 size=0;
+	guint64 owner=geteuid();
+	guint64 group=getegid();
+	
+	
+	g_autoptr(JFileMetadataOut) out=NULL;
+	g_autoptr(JFileSelector) fs=NULL;
+	clock_gettime(CLOCK_REALTIME_ALARM,&time);
+	out=j_file_metadata_out_new(path);
+	fs=j_file_selector_new(path);
+	
 	basename = g_path_get_basename(path);
 	batch = j_batch_new_for_template(J_SEMANTICS_TEMPLATE_POSIX);
-	kv = j_kv_new("posix", path);
-	object = j_object_new("posix", path);
+	
+	
+	object_number=g_str_hash(path);
+	object = j_object_new("posix", "");
+	while(max_iter)
+	{
+		gint64 time;
+		guint64 size;
+		char* object_name;
+		object_number+=g_random_int();
+		object_name=nr_to_object_name(object_number);
+		j_object_unref(object);
+		object = j_object_new("posix", object_name);
+		j_object_status(object,&time,&size,batch);
+		g_free(object_name);
+		max_iter--;
+		if (j_batch_execute(batch))
+		{
+			break;
+		}
+		
+	}
+	fi->fh=object_number;
 
-	tmp = bson_new();
+	//set_name(out,basename);
+	set_object(out,object_number);
+	set_size(out,size);
+	set_owner(out,owner); // TODO difference between effective and real 
+	set_group(out,group);
+	set_mode(out,mode); // TODO check sizes
+	set_atime(out,&time);
+	set_mtime(out,&time);
+	set_ctime(out,&time);
+	j_file_metadata_create(fs,out,batch);
 
-	bson_append_utf8(tmp, "name", -1, basename, -1);
-	bson_append_bool(tmp, "file", -1, TRUE);
-	bson_append_int64(tmp, "size", -1, 0);
-	bson_append_int64(tmp, "time", -1, g_get_real_time());
-
-	value = bson_destroy_with_steal(tmp, TRUE, &len);
-
-	j_kv_put(kv, value, len, bson_free, batch);
 	j_object_create(object, batch);
 
 	if (j_batch_execute(batch))
 	{
 		ret = 0;
 	}
-
 	/// \todo does not return 0 on success
 	return ret;
 }

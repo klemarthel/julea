@@ -21,6 +21,7 @@
 #include "julea-fuse.h"
 
 #include <errno.h>
+#include "file.h"
 
 int
 jfs_unlink(char const* path)
@@ -28,21 +29,32 @@ jfs_unlink(char const* path)
 	int ret = -ENOENT;
 
 	g_autoptr(JBatch) batch = NULL;
-	g_autoptr(JKV) kv = NULL;
+
 	g_autoptr(JObject) obj = NULL;
-
-	batch = j_batch_new_for_template(J_SEMANTICS_TEMPLATE_POSIX);
-	kv = j_kv_new("posix", path);
-	obj = j_object_new("posix", path);
-
-	j_kv_delete(kv, batch);
-	// we do not support hard links so deleting here is safe
-	j_object_delete(obj, batch);
-
-	if (j_batch_execute(batch))
+	g_autoptr(JFileMetadataOut) out=NULL;
+	g_autoptr(JFileMetadataIn) in=NULL;
+	g_autoptr(JFileSelector) fs=NULL;
+	guint64 object_nr;
+	g_autofree gchar* object_name;
+	fs = j_file_selector_new(path);
+	in=j_file_metadata_new_load(fs);
+	if (in)
 	{
-		ret = 0;
-	}
+		object_name=get_object_name(in);
+		out = j_file_metadata_in_to_out(in);
+		
+		batch = j_batch_new_for_template(J_SEMANTICS_TEMPLATE_POSIX);
+		j_file_metadata_delete(fs, out, batch);
 
+		obj = j_object_new("posix", object_name);
+
+		// we do not support hard links so deleting here is safe
+		j_object_delete(obj, batch);
+
+		if (j_batch_execute(batch))
+		{
+			ret = 0;
+		}
+	}
 	return ret;
 }
