@@ -83,6 +83,28 @@ main(int argc, char** argv)
 	test_hdf_group_link();
 	test_hdf_object();
 
+	// fuse
+	test_fuse_file();
+	test_fuse_access();
+	test_fuse_chmod();
+	test_fuse_chown();
+	test_fuse_copy_file_range();
+	test_fuse_create();
+	test_fuse_destroy();
+	test_fuse_fallocate();
+	test_fuse_getattr();
+	test_fuse_init();
+	test_fuse_mkdir();
+	test_fuse_open();
+	test_fuse_readdir();
+	test_fuse_rename();
+	test_fuse_rmdir();
+	test_fuse_truncate();
+	test_fuse_unlink();
+	test_fuse_utimens();
+	test_fuse_write();
+
+
 	ret = g_test_run();
 
 	return ret;

@@ -160,10 +160,7 @@ set_ctime(JFileMetadataOut* fe, const struct timespec* ctime)
 	fe->metadata->ctime.tv_sec = ctime->tv_sec;
 	fe->metadata->ctime.tv_nsec = ctime->tv_nsec;
 }
-void
-set_dir(JFileMetadataOut* fe, const char* dir)
-{
-}
+
 #else
 guint64
 get_object(JFileMetadataIn* fe)
@@ -371,12 +368,15 @@ j_file_metadata_rename(JFileSelector* old, JFileSelector* new, const char* path)
 JFileMetadataOut*
 j_file_metadata_out_new(const char* path)
 {
+	
 	JFileMetadataOut* out = (JFileMetadataOut*)g_malloc(sizeof(JFileMetadataOut));
 	guint32 len;
 #ifndef BSON_METADATA
 	file_metadata* fe = (file_metadata*)g_malloc(sizeof(file_metadata));
+	(void)path;
 	len = sizeof(file_metadata);
 #else
+	(void)path;
 	uint8_t* fe;
 	bson_t doc;
 

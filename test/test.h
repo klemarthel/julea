@@ -73,4 +73,24 @@ void test_hdf_file(void);
 void test_hdf_group_link(void);
 void test_hdf_object(void);
 
+void test_fuse_access(void);
+void test_fuse_chmod(void);
+void test_fuse_chown(void);
+void test_fuse_copy_file_range(void);
+void test_fuse_create(void);
+void test_fuse_destroy(void);
+void test_fuse_fallocate(void);
+void test_fuse_file(void);
+void test_fuse_getattr(void);
+void test_fuse_init(void);
+void test_fuse_mkdir(void);
+void test_fuse_open(void);
+void test_fuse_read(void);
+void test_fuse_readdir(void);
+void test_fuse_rename(void);
+void test_fuse_rmdir(void);
+void test_fuse_truncate(void);
+void test_fuse_unlink(void);
+void test_fuse_utimens(void);
+void test_fuse_write(void);
 #endif

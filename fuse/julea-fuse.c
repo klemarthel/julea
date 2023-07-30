@@ -33,6 +33,7 @@ struct fuse_operations jfs_vtable = {
 	.create = jfs_create,
 	.copy_file_range = jfs_copy_file_range,
 	.destroy = jfs_destroy,
+	.fallocate = jfs_fallocate,
 	.getattr = jfs_getattr,
 	.init = jfs_init,
 	.mkdir = jfs_mkdir,

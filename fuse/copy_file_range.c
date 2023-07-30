@@ -29,6 +29,8 @@ jfs_copy_file_range(
 	guint64 len_read;
 
 	(void)flags;
+	(void)fi_in;
+	(void)fo_in;
 
 	data = g_malloc(size); //TODO: catch Error
 	fs_in = j_file_selector_new(path_in);
@@ -57,9 +59,6 @@ jfs_copy_file_range(
 			j_object_write(object_out, data, len_read, offset_out, &len_written, batch);
 			if (j_batch_execute(batch))
 			{
-				size_t len_out1 = len_out;
-				size_t len_in1 = len_in;
-
 				gint64 old_size = get_size(fo_in);
 				gint64 new_size = old_size + len_written;
 				set_size(fo_out, new_size);

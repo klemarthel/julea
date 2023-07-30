@@ -36,6 +36,7 @@ int jfs_chown(char const*, uid_t, gid_t, struct fuse_file_info*);
 ssize_t jfs_copy_file_range(const char*, struct fuse_file_info*, off_t, const char*, struct fuse_file_info*, off_t, size_t, int);
 int jfs_create(char const*, mode_t, struct fuse_file_info*);
 void jfs_destroy(void*);
+int jfs_fallocate(const char*, int, off_t, off_t, struct fuse_file_info*);
 int jfs_getattr(char const*, struct stat*, struct fuse_file_info*);
 void* jfs_init(struct fuse_conn_info*, struct fuse_config*);
 int jfs_link(char const*, char const*);
@@ -49,6 +50,6 @@ int jfs_truncate(char const*, off_t, struct fuse_file_info*);
 int jfs_unlink(char const*);
 int jfs_utimens(char const*, const struct timespec[2], struct fuse_file_info*);
 int jfs_write(char const*, char const*, size_t, off_t, struct fuse_file_info*);
-int jfs_rename(const char *, const char *, unsigned int flags);
+int jfs_rename(const char*, const char*, unsigned int flags);
 
 #endif

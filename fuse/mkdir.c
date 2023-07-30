@@ -50,7 +50,6 @@ jfs_mkdir(char const* path, mode_t mode)
 	set_owner(out,geteuid()); // TODO difference between effective and real 
 	set_group(out,getegid());
 	set_mode(out,mode);
-	set_dir(out,directory);
 	set_ctime(out,&now);
 	set_atime(out,&now);
 	set_mtime(out,&now);

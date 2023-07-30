@@ -36,7 +36,6 @@ jfs_create(char const* path, mode_t mode, struct fuse_file_info* fi)
 	
 	g_autofree gchar* basename = NULL;
 	
-	gint32 is_file=1;
 	guint64 size=0;
 	guint64 owner=geteuid();
 	guint64 group=getegid();
@@ -56,14 +55,14 @@ jfs_create(char const* path, mode_t mode, struct fuse_file_info* fi)
 	object = j_object_new("posix", "");
 	while(max_iter)
 	{
-		gint64 time;
-		guint64 size;
+		gint64 time_tmp;
+		guint64 size_tmp;
 		char* object_name;
 		object_number+=g_random_int();
 		object_name=nr_to_object_name(object_number);
 		j_object_unref(object);
 		object = j_object_new("posix", object_name);
-		j_object_status(object,&time,&size,batch);
+		j_object_status(object,&time_tmp,&size_tmp,batch);
 		g_free(object_name);
 		max_iter--;
 		if (j_batch_execute(batch))
@@ -74,12 +73,11 @@ jfs_create(char const* path, mode_t mode, struct fuse_file_info* fi)
 	}
 	fi->fh=object_number;
 
-	//set_name(out,basename);
 	set_object(out,object_number);
 	set_size(out,size);
-	set_owner(out,owner); // TODO difference between effective and real 
+	set_owner(out,owner); 
 	set_group(out,group);
-	set_mode(out,mode); // TODO check sizes
+	set_mode(out,mode);
 	set_atime(out,&time);
 	set_mtime(out,&time);
 	set_ctime(out,&time);

@@ -22,9 +22,7 @@
 
 #include <errno.h>
 #include "file.h"
-#ifdef DATABASE_METADATA
-#include <julea-db.h>
-#endif
+
 
 int
 jfs_utimens(char const* path, const struct timespec ts[2], struct fuse_file_info* fi)

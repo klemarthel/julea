@@ -66,7 +66,6 @@ JDBSchema* metadata_schema(){
 	success=j_db_schema_add_field(schema,"owner",J_DB_TYPE_UINT64,NULL);
 	success=j_db_schema_add_field(schema,"group",J_DB_TYPE_UINT64,NULL);
 	success=j_db_schema_add_field(schema,"mode",J_DB_TYPE_SINT32,NULL);
-	success=j_db_schema_add_field(schema,"dir",J_DB_TYPE_STRING,NULL);
 	success=j_db_schema_add_field(schema,"atime_n",J_DB_TYPE_UINT64,NULL);
 	success=j_db_schema_add_field(schema,"mtime_n",J_DB_TYPE_UINT64,NULL);
 	success=j_db_schema_add_field(schema,"ctime_n",J_DB_TYPE_UINT64,NULL);
@@ -293,11 +292,7 @@ set_ctime(JFileMetadataOut* fe,const struct timespec* ctime)
 	j_db_entry_set_field(fe, "ctime_n", &(ctime->tv_nsec), -1, NULL);
 	j_db_entry_set_field(fe, "ctime_s", &(ctime->tv_sec), -1, NULL);
 }
-void
-set_dir(JFileMetadataOut* fe,const char* dir)
-{
-	j_db_entry_set_field(fe,"dir",dir,-1,NULL);
-}
+
 void
 j_file_metadata_write(JFileSelector* fs, JFileMetadataOut* fe, JBatch* batch)
 {

@@ -19,36 +19,11 @@
 #include <julea-config.h>
 #include "unistd.h"
 #include "julea-fuse.h"
-#ifndef DATABASE_METADATA
-gint* last_entry;
-#endif
+
 void*
 jfs_init(struct fuse_conn_info* conn, struct fuse_config* cfg)
 {
-	
-	
-	#ifndef DATABASE_METADATA
-	gint newval=0;
-	char* mount_id;
-	gpointer val;
-	guint32 len;
-	g_autoptr(JBatch) batch=NULL;
-	g_autoptr(JKV) kv=NULL;
-
-	mount_id=g_get_host_name();
-	last_entry=g_malloc(sizeof(gint));
-	batch=j_batch_new_for_template(J_SEMANTICS_TEMPLATE_POSIX);
-	kv=j_kv_new("posix_ids",mount_id);
-	j_kv_get(kv,&val,&len,batch);
-	if(j_batch_execute(batch)){
-		if(len==sizeof(gint)){
-			newval=*((gint*)val);
-			g_atomic_int_set(last_entry,newval);
-		}
-	}
-	
-	#endif
 	(void)conn;
-(void)cfg;
+	(void)cfg;
 	return NULL;
 }

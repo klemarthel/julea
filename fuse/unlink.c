@@ -29,12 +29,10 @@ jfs_unlink(char const* path)
 	int ret = -ENOENT;
 
 	g_autoptr(JBatch) batch = NULL;
-
 	g_autoptr(JObject) obj = NULL;
 	g_autoptr(JFileMetadataOut) out=NULL;
 	g_autoptr(JFileMetadataIn) in=NULL;
 	g_autoptr(JFileSelector) fs=NULL;
-	guint64 object_nr;
 	g_autofree gchar* object_name;
 	fs = j_file_selector_new(path);
 	in=j_file_metadata_new_load(fs);
